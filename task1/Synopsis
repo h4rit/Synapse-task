@@ -1,0 +1,5 @@
+
+
+
+the given task can be divided to to main sub-tasks, i.e. fetching tweets and performing sentiment analysis.
+to fetch tweets, we use the twitter api keys and tweepy module in python to stream in tweets.

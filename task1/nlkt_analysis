@@ -1,0 +1,162 @@
+{
+ "metadata": {
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.2-final"
+  },
+  "orig_nbformat": 2,
+  "kernelspec": {
+   "name": "python_defaultSpec_1600538021893",
+   "display_name": "Python 3.8.2 64-bit"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2,
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 75,
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "import tweepy\n",
+    "import credentials\n",
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import re\n",
+    "import matplotlib.pyplot as plt\n",
+    "import nltk\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 76,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # # # TWITTER API AUTHENTICATOR # # # #\n",
+    "\n",
+    "def TwitterAuth():\n",
+    "    authentication = tweepy.OAuthHandler(credentials.api_key,credentials.api_secret)\n",
+    "    authentication.set_access_token(credentials.access_token,credentials.access_secret)\n",
+    "    return authentication\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 77,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#list of query filters\n",
+    "\n",
+    "hashtag_query=['donald trump'] # hashtags to be searched\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 78,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # # # CLEAN DATA # # # # \n",
+    "def clean_tweet(tweet):\n",
+    "    #replace @userid, urls with '' remove # symbols and remove RT strings\n",
+    "    tweet=re.sub(r'@[A-Za-z0-9]+' ,'' ,tweet)\n",
+    "    tweet=re.sub(r'#', '',tweet)\n",
+    "    tweet=re.sub(r'RT[\\s]+', '' ,tweet)\n",
+    "    tweet=re.sub(r'https?:\\/\\/\\S+' , '' ,tweet)\n",
+    "    tweet=re.sub(r':', '',tweet)\n",
+    "    tweet=re.sub(r'[^0-9A-Za-z \\t]','',tweet)\n",
+    "\n",
+    "    return(tweet)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 79,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # # # NLTK SENTIMENT ALALYSIS # # # #\n",
+    "def sentiment_analyse(sentiment_text):\n",
+    "    score = SentimentIntensityAnalyzer().polarity_scores(sentiment_text)\n",
+    "    return score"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 80,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # # # STREAM TWEETS WITH API # # # #\n",
+    "\n",
+    "#n is number of tweets to be streamed in\n",
+    "n=14\n",
+    "\n",
+    "api = tweepy.API(  TwitterAuth()  )\n",
+    "public_tweets = api.search(hashtag_query,count=n,lang='en')\n",
+    "\n",
+    "#API.search(q[, geocode][, lang][, locale][, result_type][, count][, until][, since_id][, max_id][, include_entities])\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 81,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # # # CREATING DATAFRAME # # # # \n",
+    "df = pd.DataFrame(data=[clean_tweet(t.text) for t in public_tweets], columns=['twits'])\n",
+    "#df['id']= np.array([twt.id for twt in public_tweets])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 82,
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "# # # # ADDING SUBJECTIVITY AND POLARITY TO DATA FRAME # # # #\n",
+    "#df['confidence'] = np.array([sentiment_analyse(tweet) for tweet in df['twits']])\n",
+    "df['positive'] = np.array([sentiment_analyse(clean_tweet(t.text))[\"pos\"] for t in public_tweets])\n",
+    "df['negative'] = np.array([sentiment_analyse(clean_tweet(t.text))[\"neg\"] for t in public_tweets])\n",
+    "df['neutral'] = np.array([sentiment_analyse(clean_tweet(t.text))[\"neu\"] for t in public_tweets])\n",
+    "\n",
+    "    \n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 83,
+   "metadata": {},
+   "outputs": [
+    {
+     "output_type": "execute_result",
+     "data": {
+      "text/plain": "                                                twits  positive  negative  \\\n0    Youre going to hear a lot about health care  ...     0.117     0.080   \n1    If Democrats can impeach Donald Trump in an e...     0.153     0.000   \n2    Its hard to believe but Mitch McConnell has d...     0.000     0.270   \n3    The 100 richest Americans have made more than...     0.128     0.155   \n4    Youre going to hear a lot about health care  ...     0.117     0.080   \n5   Gill28 Lindsey Graham already referring to a n...     0.000     0.143   \n6    US Circuit Judge Amy Coney Barrett is seen as...     0.067     0.000   \n7    US Circuit Judge Amy Coney Barrett is seen as...     0.067     0.000   \n8    Our senate has to fill the Supreme Court just...     0.184     0.000   \n9    UNITED NATIONS CALLS OUT TRUMP amp BARR GOONS...     0.243     0.000   \n10   If Democrats can impeach Donald Trump in an e...     0.153     0.000   \n11   How to accomplish this  When youre in your 5t...     0.099     0.156   \n12  gun Republican Senator Ted Cruz says President...     0.338     0.091   \n13   BIDENS ECONOMIC PLANSSPELL DISASTER FOR SMALL...     0.152     0.218   \n\n    neutral  \n0     0.803  \n1     0.847  \n2     0.730  \n3     0.717  \n4     0.803  \n5     0.857  \n6     0.933  \n7     0.933  \n8     0.816  \n9     0.757  \n10    0.847  \n11    0.745  \n12    0.570  \n13    0.631  ",
+      "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>twits</th>\n      <th>positive</th>\n      <th>negative</th>\n      <th>neutral</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>Youre going to hear a lot about health care  ...</td>\n      <td>0.117</td>\n      <td>0.080</td>\n      <td>0.803</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>If Democrats can impeach Donald Trump in an e...</td>\n      <td>0.153</td>\n      <td>0.000</td>\n      <td>0.847</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>Its hard to believe but Mitch McConnell has d...</td>\n      <td>0.000</td>\n      <td>0.270</td>\n      <td>0.730</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>The 100 richest Americans have made more than...</td>\n      <td>0.128</td>\n      <td>0.155</td>\n      <td>0.717</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>Youre going to hear a lot about health care  ...</td>\n      <td>0.117</td>\n      <td>0.080</td>\n      <td>0.803</td>\n    </tr>\n    <tr>\n      <th>5</th>\n      <td>Gill28 Lindsey Graham already referring to a n...</td>\n      <td>0.000</td>\n      <td>0.143</td>\n      <td>0.857</td>\n    </tr>\n    <tr>\n      <th>6</th>\n      <td>US Circuit Judge Amy Coney Barrett is seen as...</td>\n      <td>0.067</td>\n      <td>0.000</td>\n      <td>0.933</td>\n    </tr>\n    <tr>\n      <th>7</th>\n      <td>US Circuit Judge Amy Coney Barrett is seen as...</td>\n      <td>0.067</td>\n      <td>0.000</td>\n      <td>0.933</td>\n    </tr>\n    <tr>\n      <th>8</th>\n      <td>Our senate has to fill the Supreme Court just...</td>\n      <td>0.184</td>\n      <td>0.000</td>\n      <td>0.816</td>\n    </tr>\n    <tr>\n      <th>9</th>\n      <td>UNITED NATIONS CALLS OUT TRUMP amp BARR GOONS...</td>\n      <td>0.243</td>\n      <td>0.000</td>\n      <td>0.757</td>\n    </tr>\n    <tr>\n      <th>10</th>\n      <td>If Democrats can impeach Donald Trump in an e...</td>\n      <td>0.153</td>\n      <td>0.000</td>\n      <td>0.847</td>\n    </tr>\n    <tr>\n      <th>11</th>\n      <td>How to accomplish this  When youre in your 5t...</td>\n      <td>0.099</td>\n      <td>0.156</td>\n      <td>0.745</td>\n    </tr>\n    <tr>\n      <th>12</th>\n      <td>gun Republican Senator Ted Cruz says President...</td>\n      <td>0.338</td>\n      <td>0.091</td>\n      <td>0.570</td>\n    </tr>\n    <tr>\n      <th>13</th>\n      <td>BIDENS ECONOMIC PLANSSPELL DISASTER FOR SMALL...</td>\n      <td>0.152</td>\n      <td>0.218</td>\n      <td>0.631</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+     },
+     "metadata": {},
+     "execution_count": 83
+    }
+   ],
+   "source": [
+    "df"
+   ]
+  }
+ ]
+}

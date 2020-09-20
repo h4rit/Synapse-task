@@ -1,0 +1,178 @@
+{
+ "metadata": {
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.2-final"
+  },
+  "orig_nbformat": 2,
+  "kernelspec": {
+   "name": "python_defaultSpec_1600545401423",
+   "display_name": "Python 3.8.2 64-bit"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2,
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import tweepy\n",
+    "from textblob import TextBlob\n",
+    "import credentials\n",
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import re"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # # # TWITTER API AUTHENTICATOR # # # #\n",
+    "\n",
+    "def TwitterAuth():\n",
+    "    authentication = tweepy.OAuthHandler(credentials.api_key,credentials.api_secret)\n",
+    "    authentication.set_access_token(credentials.access_token,credentials.access_secret)\n",
+    "    return authentication\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#list of query filters\n",
+    "\n",
+    "hashtag_query=['china'] # hashtags to be searched\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # # # CLEAN DATA # # # # \n",
+    "def clean_tweet(tweet):\n",
+    "    #replace @userid, urls with '' remove # symbols and remove RT strings\n",
+    "    tweet=re.sub(r'@[A-Za-z0-9]+' ,'' ,tweet)\n",
+    "    tweet=re.sub(r'#', '',tweet)\n",
+    "    tweet=re.sub(r'RT[\\s]+', '' ,tweet)\n",
+    "    tweet=re.sub(r'https?:\\/\\/\\S+' , '' ,tweet)\n",
+    "    tweet=re.sub(r':', '',tweet)\n",
+    "    tweet=re.sub(r'[^0-9A-Za-z \\t]','',tweet)\n",
+    "    tweet=re.sub(r'[/t]','',tweet)\n",
+    "    return(tweet)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # # # TEXTBLOB POLARITY # # # #\n",
+    "def analyze_polarity(tweet):\n",
+    "    summary = TextBlob(tweet)\n",
+    "    return summary.sentiment.polarity \n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # # # TEXTBLOB SUBJECTIVITY # # # #\n",
+    "def analyze_subjectivity(tweet):\n",
+    "    summary = TextBlob(tweet)\n",
+    "    return summary.sentiment.subjectivity \n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "# # # # STREAM TWEETS WITH API # # # #\n",
+    "\n",
+    "#n is number of tweets to be streamed in\n",
+    "n=14\n",
+    "\n",
+    "api = tweepy.API(  TwitterAuth()  )\n",
+    "public_tweets = api.search(hashtag_query,count=n,lang='en')\n",
+    "\n",
+    "#API.search(q[, geocode][, lang][, locale][, result_type][, count][, until][, since_id][, max_id][, include_entities])\n",
+    "\n",
+    "for t in public_tweets:\n",
+    "    clean_tweet(t.text)\n",
+    "    \n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "# # # # CREATING DATAFRAME # # # # \n",
+    "df = pd.DataFrame(data=[clean_tweet(t.text) for t in public_tweets], columns=['twits'])\n",
+    "#df['id']= np.array([twt.id for twt in public_tweets])\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # # # ADDING SUBJECTIVITY AND POLARITY TO DATA FRAME # # # #\n",
+    "df['subjectivity'] = np.array([analyze_subjectivity(tweet) for tweet in df['twits']])\n",
+    "df['polarity'] = np.array([analyze_polarity(tweet) for tweet in df['twits']])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "output_type": "stream",
+     "name": "stdout",
+     "text": "twits  subjectivity  polarity\n0    POWPresiden  Joe Bidens Agenda Is Made In Chi...      0.888889     0.500\n1     As far as we know in China here could be eve...      1.000000     0.100\n2    Joe Biden delivered remarks o union members a...      0.125000    -0.125\n3    How o help he Uyghur Muslims in China   Uyghu...      0.000000     0.000\n4    This picure of he Sun and Moon Pagoda in Chin...      0.600000    -0.350\n5    HUGEg Is China Funding Democras and he Biden ...      0.000000     0.000\n6    China openly hreaens Taiwan wih invasion The ...      0.500000     0.000\n7   Is enirely possible ha he bes fuure for he eni...      1.000000     0.000\n8    China admis in a whie paper ha from 201419 ir...      0.000000     0.000\n9    VoiceTaiwan leader Tsai Ingwen who pledged de...      0.000000     0.000\n10   Bu in oal nearly eigh million people ou of a ...      0.400000     0.100\n11   In Chinas lile Mecca he own of Linxia Gansu e...      1.000000     0.600\n12   Obama killed he pharmaceuical manufacuring bu...      0.000000    -0.100\n13   Two years ago he Holy See reached an agreemen...      0.000000     0.000\n"
+    }
+   ],
+   "source": [
+    "print(df)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ]
+}
